@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV Optimizer — Job Application Assistant</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1218;
+    --crimson: #6B1A3E;
+    --crimson-light: #8B2A54;
+    --crimson-pale: #f7f0f4;
+    --gold: #C9922A;
+    --sand: #f5f0e8;
+    --muted: #7a6e74;
+    --border: #e0d5da;
+    --white: #fdfaf8;
+    --success: #2d7a4f;
+    --step-done: #d4edda;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--white);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--crimson);
+    padding: 2.5rem 2rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: 30%;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+  }
+  .header-inner { max-width: 860px; margin: 0 auto; position: relative; z-index: 1; }
+  header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 0.5rem;
+  }
+  header h1 em { color: #f0c8d8; font-style: italic; }
+  header p {
+    color: rgba(255,255,255,0.65);
+    font-size: 0.95rem;
+    font-weight: 300;
+    max-width: 500px;
+  }
+
+  /* PROGRESS STEPS */
+  .steps-bar {
+    background: var(--sand);
+    border-bottom: 1px solid var(--border);
+    padding: 0.9rem 2rem;
+    overflow-x: auto;
+  }
+  .steps-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    gap: 0;
+    align-items: center;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+    padding: 0.3rem 0.5rem;
+    border-radius: 20px;
+    transition: all 0.3s;
+  }
+  .step.active { color: var(--crimson); }
+  .step.done { color: var(--success); }
+  .step-num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .step.active .step-num { background: var(--crimson); color: #fff; }
+  .step.done .step-num { background: var(--success); color: #fff; }
+  .step-arrow { color: var(--border); font-size: 0.7rem; padding: 0 0.1rem; }
+
+  /* MAIN LAYOUT */
+  main { max-width: 860px; margin: 0 auto; padding: 2rem; }
+
+  /* API KEY SECTION */
+  .api-section {
+    background: var(--crimson-pale);
+    border: 1px solid #e0c8d0;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .api-section label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--crimson);
+    white-space: nowrap;
+  }
+  .api-section input {
+    flex: 1;
+    min-width: 220px;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid #c8a8b8;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .api-section input:focus { border-color: var(--crimson); }
+  .api-note {
+    font-size: 0.75rem;
+    color: var(--muted);
+    width: 100%;
+    margin-top: -0.3rem;
+  }
+  .api-note a { color: var(--crimson); text-decoration: none; }
+  .api-note a:hover { text-decoration: underline; }
+
+  /* INPUT PANELS */
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 640px) { .input-grid { grid-template-columns: 1fr; } }
+
+  .panel {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    transition: box-shadow 0.2s;
+  }
+  .panel:focus-within { box-shadow: 0 0 0 3px rgba(107,26,62,0.12); border-color: var(--crimson); }
+
+  .panel-header {
+    background: var(--sand);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-icon {
+    width: 28px; height: 28px;
+    background: var(--crimson);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem;
+  }
+  .panel-title { font-size: 0.85rem; font-weight: 600; color: var(--ink); }
+  .panel-sub { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+
+  textarea {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    outline: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--ink);
+    resize: vertical;
+    background: #fff;
+    min-height: 220px;
+  }
+  textarea::placeholder { color: #bbb; }
+
+  /* OPTIONS ROW */
+  .options-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .option-group { display: flex; align-items: center; gap: 0.5rem; }
+  .option-group label { font-size: 0.82rem; font-weight: 500; color: var(--muted); }
+  select {
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    background: #fff;
+    color: var(--ink);
+    outline: none;
+    cursor: pointer;
+  }
+  select:focus { border-color: var(--crimson); }
+
+  /* RUN BUTTON */
+  .run-btn {
+    background: var(--crimson);
+    color: #fff;
+    border: none;
+    padding: 0.9rem 2.5rem;
+    border-radius: 10px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .run-btn:hover:not(:disabled) {
+    background: var(--crimson-light);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(107,26,62,0.3);
+  }
+  .run-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .run-btn .btn-arrow { font-size: 1.1rem; transition: transform 0.2s; }
+  .run-btn:hover:not(:disabled) .btn-arrow { transform: translateX(3px); }
+
+  /* OUTPUT AREA */
+  #output-area { margin-top: 2.5rem; }
+
+  .stage-block {
+    margin-bottom: 2rem;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .stage-block.visible { opacity: 1; transform: translateY(0); }
+
+  .stage-header {
+    background: var(--crimson);
+    padding: 0.9rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .stage-num {
+    width: 28px; height: 28px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .stage-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    color: #fff;
+  }
+  .stage-status {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .stage-body {
+    background: #fff;
+    padding: 1.5rem;
+  }
+  .stage-content {
+    font-size: 0.88rem;
+    line-height: 1.75;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .stage-content strong, .stage-content b { color: var(--crimson); font-weight: 600; }
+
+  /* COPY BUTTON */
+  .copy-btn {
+    margin-top: 1rem;
+    background: var(--sand);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.4rem 0.9rem;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: var(--crimson-pale); color: var(--crimson); border-color: var(--crimson); }
+
+  /* ERROR */
+  .error-box {
+    background: #fff0f0;
+    border: 1px solid #f0a0a0;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    color: #c0392b;
+    font-size: 0.85rem;
+    margin-top: 1rem;
+  }
+
+  /* LOADING PULSE */
+  .loading-pulse {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    animation: pulse 1s ease-in-out infinite;
+    margin-left: 4px;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+  /* DIVIDER */
+  .action-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  /* INSTRUCTIONS */
+  .instructions {
+    background: var(--sand);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border);
+  }
+  .instructions h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    color: var(--crimson);
+    margin-bottom: 0.75rem;
+  }
+  .instructions ol {
+    padding-left: 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .instructions li { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
+  .instructions li strong { color: var(--ink); }
+
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.75rem;
+    color: var(--border);
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1>CV Optimizer<br><em>Job Application Assistant</em></h1>
+    <p>Wklej ogłoszenie i CV — automatycznie przejdę przez wszystkie 5 etapów analizy i optymalizacji.</p>
+  </div>
+</header>
+
+<div class="steps-bar">
+  <div class="steps-inner">
+    <div class="step" id="s1"><div class="step-num">1</div>Analiza firmy</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="s2"><div class="step-num">2</div>Analiza ogłoszenia</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="s3"><div class="step-num">3</div>Mapowanie CV</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="s4"><div class="step-num">4</div>Przepisane CV</div>
+    <div class="step-arrow">›</div>
+    <div class="step" id="s5"><div class="step-num">5</div>List motywacyjny</div>
+  </div>
+</div>
+
+<main>
+
+  <div class="api-section">
+    <label>🔑 Klucz API Anthropic</label>
+    <input type="password" id="api-key" placeholder="sk-ant-api03-..." autocomplete="off">
+    <div class="api-note">
+      Klucz przechowywany tylko w pamięci przeglądarki, nie jest nigdzie wysyłany poza Anthropic API.
+      Uzyskaj go na <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+    </div>
+  </div>
+
+  <div class="instructions">
+    <h3>Jak używać</h3>
+    <ol>
+      <li><strong>Wklej klucz API</strong> Anthropic (jednorazowo — możesz zapisać w przeglądarce)</li>
+      <li><strong>Wklej ogłoszenie o pracę</strong> — cały tekst z portalu rekrutacyjnego</li>
+      <li><strong>Wklej treść swojego CV</strong> — tekst (nie plik PDF)</li>
+      <li><strong>Wybierz język</strong> wyników i kliknij <em>Uruchom analizę</em></li>
+      <li>Aplikacja automatycznie wykona wszystkie 5 etapów i pokaże wyniki</li>
+    </ol>
+  </div>
+
+  <div class="input-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-icon">📋</div>
+        <div>
+          <div class="panel-title">Ogłoszenie o pracę</div>
+          <div class="panel-sub">Wklej pełną treść ogłoszenia</div>
+        </div>
+      </div>
+      <textarea id="job-posting" placeholder="Wklej tutaj treść ogłoszenia o pracę...
+
+Twój zakres obowiązków:
+• ...
+• ...
+
+Nasze wymagania:
+• ..."></textarea>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-icon">👤</div>
+        <div>
+          <div class="panel-title">Twoje CV</div>
+          <div class="panel-sub">Wklej tekst CV (nie plik PDF)</div>
+        </div>
+      </div>
+      <textarea id="cv-text" placeholder="Wklej tutaj tekst swojego CV...
+
+Doświadczenie zawodowe:
+2020–2024 | Stanowisko | Firma
+• ...
+
+Wykształcenie:
+..."></textarea>
+    </div>
+  </div>
+
+  <div class="options-row">
+    <div class="option-group">
+      <label>Język wyników:</label>
+      <select id="lang-select">
+        <option value="pl">🇵🇱 Polski</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="both">🇵🇱🇬🇧 Oba</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <label>Etapy:</label>
+      <select id="stages-select">
+        <option value="all">Wszystkie (1–5)</option>
+        <option value="analysis">Tylko analiza (1–3)</option>
+        <option value="cv">CV + list (4–5)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <button class="run-btn" id="run-btn" onclick="runAnalysis()">
+      Uruchom analizę <span class="btn-arrow">→</span>
+    </button>
+    <div id="global-status" style="font-size:0.82rem; color:var(--muted);"></div>
+  </div>
+
+  <div id="output-area"></div>
+
+</main>
+
+<footer>CV Optimizer · Powered by Claude API · Twoje dane nie są przechowywane</footer>
+
+<script>
+const STAGES = {
+  pl: [
+    {
+      num: 1,
+      title: "Analiza firmy",
+      prompt: (job) => `Na podstawie ogłoszenia o pracę poniżej, zidentyfikuj nazwę firmy i przeprowadź głęboką analizę strategiczną.
+
+OGŁOSZENIE:
+${job}
+
+Wykonaj:
+1. Zidentyfikuj nazwę firmy i branżę
+2. Określ aktualne priorytety strategiczne firmy na 2025-2026 (na podstawie treści ogłoszenia i swojej wiedzy o firmie/branży)
+3. Jakie problemy biznesowe firma próbuje rozwiązać tym stanowiskiem?
+4. Jaki jest ton komunikacji firmy (formalny/relacyjny/innowacyjny/korporacyjny)?
+5. Podsumuj w 5 punktach co jest dla nich najważniejsze TERAZ
+
+Formatuj odpowiedź czytelnie z nagłówkami. Bądź konkretny i analityczny, nie ogólnikowy.`
+    },
+    {
+      num: 2,
+      title: "Analiza ogłoszenia",
+      prompt: (job) => `Przeanalizuj szczegółowo to ogłoszenie o pracę:
+
+${job}
+
+Wypisz:
+**1. TWARDE WYMAGANIA** (bez których kandydat odpada):
+- Lista konkretnych wymagań
+
+**2. NICE-TO-HAVE** (wyróżniki, mile widziane):
+- Lista
+
+**3. UKRYTA POTRZEBA** — co firma NAPRAWDĘ chce rozwiązać tym stanowiskiem? Jaki problem biznesowy stoi za tym ogłoszeniem?
+
+**4. SŁOWA KLUCZOWE ATS** — dokładne frazy których system będzie szukać w CV (minimum 15 fraz)
+
+**5. TYP OSOBY** — jaki charakter, styl pracy i podejście sugeruje język ogłoszenia? Co NIE będzie pasować?
+
+Bądź analityczny i bezpośredni. Wskaż rzeczy nieoczywiste.`
+    },
+    {
+      num: 3,
+      title: "Mapowanie CV na wymagania",
+      prompt: (job, cv) => `Masz ogłoszenie o pracę i CV kandydata. Zmapuj je precyzyjnie.
+
+OGŁOSZENIE:
+${job}
+
+CV KANDYDATA:
+${cv}
+
+Dla każdego kluczowego wymagania z ogłoszenia:
+1. Znajdź NAJLEPIEJ pasujące doświadczenie z CV
+2. Oceń dopasowanie: ✅ MOCNE / ⚠️ CZĘŚCIOWE / ❌ BRAK
+3. Napisz jak to sformułować JĘZYKIEM OGŁOSZENIA
+
+Na końcu: sekcja **LUKI** — czego brakuje wprost, co wymaga nadrobienia lub zaakcentowania.
+
+Bądź bezpośredni. Nie owijaj w bawełnę przy lukach.`
+    },
+    {
+      num: 4,
+      title: "Przepisane punkty CV",
+      prompt: (job, cv) => `Przepisz doświadczenia zawodowe z CV tak, aby maksymalnie odpowiadały na wymagania ogłoszenia.
+
+OGŁOSZENIE:
+${job}
+
+CV DO PRZEPISANIA:
+${cv}
+
+Zasady przepisywania:
+- Każdy punkt w formacie: WYNIK + SKALA + METODA
+- Używaj DOKŁADNYCH słów kluczowych z ogłoszenia
+- Eksponuj liczby i metryki (jeśli są w CV)
+- Zachowaj prawdziwość — nie wymyślaj faktów, tylko lepiej je sformułuj
+- Uwydatnij to co odpowiada na ukryte potrzeby firmy
+
+Podaj gotowe punkty do wklejenia, posortowane od najważniejszego. Zaznacz co jest nowe/zmienione vs oryginał.`
+    },
+    {
+      num: 5,
+      title: "List motywacyjny",
+      prompt: (job, cv) => `Napisz profesjonalny list motywacyjny na podstawie ogłoszenia i CV.
+
+OGŁOSZENIE:
+${job}
+
+CV:
+${cv}
+
+Struktura listu (5 akapitów):
+1. **Otwarcie** — nazwij konkretny problem biznesowy firmy (z ogłoszenia), pokaż że rozumiesz ich sytuację. ZERO frazesów "od zawsze marzyłem".
+2. **Osiągnięcia** — Twoje 2-3 najsilniejsze liczby/wyniki dopasowane do ich potrzeb
+3. **Wyróżnik** — coś czego inni kandydaci nie mają (technologia, AI, specyficzne doświadczenie)
+4. **Dopasowanie kulturowe** — dlaczego ta firma, nie inna
+5. **Call to action** — konkretna propozycja na rozmowę, nie "czekam na kontakt"
+
+Ton: pewny siebie, konkretny, relacyjny. Bez korporacyjnego bełkotu.
+Długość: max 350 słów.`
+    }
+  ]
+};
+
+// English versions (same structure, English prompts)
+STAGES.en = STAGES.pl.map((s, i) => ({
+  ...s,
+  prompt: i === 0
+    ? (job) => `Based on the job posting below, identify the company name and conduct a deep strategic analysis.
+
+JOB POSTING:
+${job}
+
+Execute:
+1. Identify company name and industry
+2. Determine current strategic priorities for 2025-2026 (based on posting content and your knowledge of the company/industry)
+3. What business problems is the company trying to solve with this position?
+4. What is the company's communication tone (formal/relational/innovative/corporate)?
+5. Summarize in 5 points what is most important to them RIGHT NOW
+
+Format with clear headers. Be specific and analytical, not generic.`
+
+    : i === 1
+    ? (job) => `Analyze this job posting in detail:
+
+${job}
+
+List:
+**1. HARD REQUIREMENTS** (without which a candidate is rejected):
+- Specific requirements
+
+**2. NICE-TO-HAVE** (differentiators, preferred):
+- List
+
+**3. HIDDEN NEED** — what does the company REALLY want to solve with this position? What business problem sits behind this posting?
+
+**4. ATS KEYWORDS** — exact phrases the system will search for in CVs (minimum 15 phrases)
+
+**5. PERSONALITY TYPE** — what character, work style and approach does the language suggest? What WON'T fit?
+
+Be analytical and direct. Point out non-obvious things.`
+
+    : i === 2
+    ? (job, cv) => `You have a job posting and a candidate's CV. Map them precisely.
+
+JOB POSTING:
+${job}
+
+CANDIDATE CV:
+${cv}
+
+For each key requirement from the posting:
+1. Find the BEST matching experience from the CV
+2. Rate the match: ✅ STRONG / ⚠️ PARTIAL / ❌ MISSING
+3. Write how to phrase it USING THE POSTING'S LANGUAGE
+
+At the end: **GAPS** section — what's explicitly missing, what needs to be addressed or highlighted.
+
+Be direct. Don't sugarcoat gaps.`
+
+    : i === 3
+    ? (job, cv) => `Rewrite the work experience from the CV to maximally match the job posting requirements.
+
+JOB POSTING:
+${job}
+
+CV TO REWRITE:
+${cv}
+
+Rewriting rules:
+- Each point in format: RESULT + SCALE + METHOD
+- Use EXACT keywords from the job posting
+- Highlight numbers and metrics (if present in CV)
+- Stay truthful — don't invent facts, just phrase them better
+- Highlight what addresses the company's hidden needs
+
+Provide ready-to-paste bullet points, sorted by importance. Mark what is new/changed vs original.`
+
+    : (job, cv) => `Write a professional cover letter based on the job posting and CV.
+
+JOB POSTING:
+${job}
+
+CV:
+${cv}
+
+Letter structure (5 paragraphs):
+1. **Opening** — name a specific business problem of the company (from the posting), show you understand their situation. ZERO clichés like "I have always dreamed of".
+2. **Achievements** — your 2-3 strongest numbers/results matched to their needs
+3. **Differentiator** — something other candidates don't have (technology, AI, specific experience)
+4. **Cultural fit** — why this company, not another
+5. **Call to action** — a concrete proposal for the interview, not just "I look forward to hearing from you"
+
+Tone: confident, concrete, relational. No corporate jargon.
+Length: max 350 words.`
+}));
+
+async function callClaude(apiKey, prompt) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error?.message || `API error ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.content.map(b => b.text || '').join('');
+}
+
+function formatOutput(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^#{1,3}\s+(.+)$/gm, '<strong>$1</strong>')
+    .replace(/✅/g, '<span style="color:#2d7a4f">✅</span>')
+    .replace(/⚠️/g, '<span style="color:#c9922a">⚠️</span>')
+    .replace(/❌/g, '<span style="color:#c0392b">❌</span>');
+}
+
+function setStep(num, state) {
+  const el = document.getElementById('s' + num);
+  if (!el) return;
+  el.className = 'step ' + state;
+}
+
+function createStageBlock(stage) {
+  const block = document.createElement('div');
+  block.className = 'stage-block';
+  block.id = 'stage-' + stage.num;
+  block.innerHTML = `
+    <div class="stage-header">
+      <div class="stage-num">${stage.num}</div>
+      <div class="stage-title">${stage.title}</div>
+      <div class="stage-status" id="status-${stage.num}">
+        <span class="spinner"></span> Analizuję<span class="loading-pulse"></span>
+      </div>
+    </div>
+    <div class="stage-body">
+      <div class="stage-content" id="content-${stage.num}"></div>
+      <button class="copy-btn" onclick="copyStage(${stage.num})" style="display:none" id="copy-${stage.num}">📋 Kopiuj</button>
+    </div>
+  `;
+  return block;
+}
+
+async function runAnalysis() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  const jobPosting = document.getElementById('job-posting').value.trim();
+  const cvText = document.getElementById('cv-text').value.trim();
+  const lang = document.getElementById('lang-select').value;
+  const stagesMode = document.getElementById('stages-select').value;
+
+  if (!apiKey) { alert('Wklej klucz API Anthropic'); return; }
+  if (!jobPosting) { alert('Wklej ogłoszenie o pracę'); return; }
+  if (!cvText && stagesMode !== 'analysis') { alert('Wklej tekst CV'); return; }
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Pracuję...';
+
+  const outputArea = document.getElementById('output-area');
+  outputArea.innerHTML = '';
+
+  const langs = lang === 'both' ? ['pl', 'en'] : [lang];
+
+  let stageNums = [1,2,3,4,5];
+  if (stagesMode === 'analysis') stageNums = [1,2,3];
+  if (stagesMode === 'cv') stageNums = [4,5];
+
+  for (const l of langs) {
+    if (langs.length > 1) {
+      const langHeader = document.createElement('h2');
+      langHeader.style.cssText = 'font-family: DM Serif Display, serif; color: var(--crimson); margin: 2rem 0 1rem; font-size: 1.3rem;';
+      langHeader.textContent = l === 'pl' ? '🇵🇱 Wersja polska' : '🇬🇧 English version';
+      outputArea.appendChild(langHeader);
+    }
+
+    const stages = STAGES[l].filter(s => stageNums.includes(s.num));
+
+    for (const stage of stages) {
+      setStep(stage.num, 'active');
+      const block = createStageBlock(stage);
+      outputArea.appendChild(block);
+
+      // Animate in
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => { block.classList.add('visible'); });
+      });
+
+      block.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      try {
+        const prompt = stage.num <= 2
+          ? stage.prompt(jobPosting)
+          : stage.prompt(jobPosting, cvText);
+
+        const result = await callClaude(apiKey, prompt);
+
+        document.getElementById('content-' + stage.num).innerHTML = formatOutput(result);
+        document.getElementById('status-' + stage.num).innerHTML = '✓ Gotowe';
+        document.getElementById('status-' + stage.num).style.color = 'rgba(255,255,255,0.9)';
+        document.getElementById('copy-' + stage.num).style.display = 'inline-block';
+        setStep(stage.num, 'done');
+
+      } catch (err) {
+        document.getElementById('content-' + stage.num).innerHTML =
+          `<div class="error-box">❌ Błąd: ${err.message}</div>`;
+        document.getElementById('status-' + stage.num).innerHTML = '✗ Błąd';
+        setStep(stage.num, '');
+        break;
+      }
+    }
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = 'Uruchom ponownie <span class="btn-arrow">→</span>';
+  document.getElementById('global-status').textContent = '✓ Analiza zakończona';
+}
+
+function copyStage(num) {
+  const content = document.getElementById('content-' + num).innerText;
+  navigator.clipboard.writeText(content).then(() => {
+    const btn = document.getElementById('copy-' + num);
+    btn.textContent = '✓ Skopiowano!';
+    setTimeout(() => { btn.textContent = '📋 Kopiuj'; }, 2000);
+  });
+}
+
+// Save API key in sessionStorage for convenience
+document.getElementById('api-key').addEventListener('input', function() {
+  sessionStorage.setItem('cv_api_key', this.value);
+});
+const savedKey = sessionStorage.getItem('cv_api_key');
+if (savedKey) document.getElementById('api-key').value = savedKey;
+</script>
+</body>
+</html>
