@@ -215,6 +215,7 @@ footer{text-align:center;padding:2rem;font-size:.72rem;color:#2e292c;border-top:
       <div class="ps" id="p3"><div class="ps-num">3</div><div class="ps-label">Generowanie przepisanego CV</div><div class="ps-status" id="ps3"></div></div>
       <div class="ps" id="p4"><div class="ps-num">4</div><div class="ps-label">Tworzenie listów motywacyjnych</div><div class="ps-status" id="ps4"></div></div>
       <div class="ps" id="p5"><div class="ps-num">5</div><div class="ps-label">Budowanie plików DOCX</div><div class="ps-status" id="ps5"></div></div>
+      <div class="ps" id="p6"><div class="ps-num">6</div><div class="ps-label">Pytania rekrutera i odpowiedzi</div><div class="ps-status" id="ps6"></div></div>
     </div>
     <div id="err-area"></div>
   </div>
@@ -239,6 +240,15 @@ footer{text-align:center;padding:2rem;font-size:.72rem;color:#2e292c;border-top:
       <div class="dl-card">
         <div><div class="dl-flag">🇬🇧</div><div class="dl-name">Cover Letter</div><div class="dl-type">Cover Letter · DOCX</div></div>
         <button class="dl-btn" id="dl-lm-en">⬇ Download CL (EN)</button>
+      </div>
+      <div class="dl-card" style="border-color:var(--gold);grid-column:span 2">
+        <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap">
+          <div style="flex:1"><div class="dl-flag">🎯</div><div class="dl-name">Pytania rekrutera + Twoje odpowiedzi</div><div class="dl-type">Interview Preparation · DOCX PL & EN</div></div>
+          <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+            <button class="dl-btn" id="dl-qa-pl" style="background:var(--gold)">⬇ Pobierz arkusz (PL)</button>
+            <button class="dl-btn" id="dl-qa-en" style="background:var(--gold)">⬇ Download sheet (EN)</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -453,6 +463,42 @@ function buildCL(data,lang){
   }]});
 }
 
+// ── QA PROMPT & DOCX ─────────────────────────────────────────────
+function promptQA(job,cv,analysis,lang){
+  const pl=lang==='pl';
+  return`Wciel się w profesjonalnego rekrutera na to stanowisko. Zwróć TYLKO JSON (bez markdown):\n{\n  "recruiterQuestions":[\n    {"question":"pytanie rekrutera","answer":"sugerowana odpowiedź kandydata — konkretna, z odwołaniem do doświadczeń i liczb z CV, 3-5 zdań"}\n  ],\n  "candidateQuestions":["pytanie które kandydat może zadać rekruterowi"]\n}\n\nZASADY:\n- recruiterQuestions: dokładnie 6 pytań (mix: motywacyjne, sytuacyjne, kompetencyjne, o doświadczeniu, o technologii/AI, o stylu pracy)\n- Odpowiedzi konkretne — odwołują się do realnych liczb z CV (TOP 5, 165%, 175 klientów itp.)\n- candidateQuestions: dokładnie 3 mądre pytania pokazujące znajomość firmy i branży, nie banalne\n- Język wyłącznie: ${pl?'POLSKI':'ENGLISH'}\n\nOGŁOSZENIE:\n${job}\nCV:\n${cv}\nANALIZA:\n${JSON.stringify(analysis)}`;
+}
+
+function buildQA(data,lang,candidateName){
+  const pl=lang==='pl';
+  const DARK2='6B1A3E',LIGHTC='888888',BGNUM='F7F0F4';
+  const {recruiterQuestions,candidateQuestions}=data;
+  const children=[
+    new Paragraph({spacing:{before:0,after:60},children:[new TextRun({text:pl?'Przygotowanie do rozmowy rekrutacyjnej':'Interview Preparation Sheet',bold:true,size:36,color:DARK2,font:'Arial'})]}),
+    new Paragraph({spacing:{before:0,after:40},children:[new TextRun({text:(candidateName||'Kandydat')+' · '+(new Date().toLocaleDateString(pl?'pl-PL':'en-GB',{month:'long',year:'numeric'})),size:19,color:LIGHTC,font:'Arial'})]}),
+    new Paragraph({spacing:{before:0,after:300},border:{bottom:{style:BorderStyle.SINGLE,size:6,color:DARK2,space:2}},children:[new TextRun({text:'',size:18,font:'Arial'})]}),
+    new Paragraph({spacing:{before:0,after:240},children:[new TextRun({text:pl?'CZĘŚĆ I — Pytania rekrutera i sugerowane odpowiedzi':'PART I — Recruiter Questions & Suggested Answers',bold:true,size:24,color:DARK2,font:'Arial'})]}),
+    ...recruiterQuestions.flatMap((qa,i)=>[
+      new Paragraph({spacing:{before:i===0?0:280,after:100},children:[
+        new TextRun({text:`Q${i+1}  `,bold:true,size:22,color:DARK2,font:'Arial'}),
+        new TextRun({text:qa.question,bold:true,size:22,color:'1A1218',font:'Arial'}),
+      ]}),
+      new Paragraph({spacing:{before:80,after:40},children:[new TextRun({text:pl?'Sugerowana odpowiedź:':'Suggested answer:',bold:true,size:17,color:LIGHTC,font:'Arial'})]}),
+      new Paragraph({spacing:{before:0,after:40},alignment:AlignmentType.JUSTIFIED,children:[new TextRun({text:qa.answer,size:20,font:'Arial',color:'333333'})]}),
+      new Paragraph({spacing:{before:40,after:0},border:{bottom:{style:BorderStyle.SINGLE,size:2,color:'E0D5DA',space:1}},children:[new TextRun({text:'',size:12,font:'Arial'})]}),
+    ]),
+    new Paragraph({spacing:{before:480,after:160},children:[new TextRun({text:pl?'CZĘŚĆ II — Pytania które możesz zadać rekruterowi':'PART II — Questions You Can Ask the Recruiter',bold:true,size:24,color:DARK2,font:'Arial'})]}),
+    new Paragraph({spacing:{before:0,after:220},children:[new TextRun({text:pl?'Zadaj 2–3 z poniższych pytań — pokaż że odrobiłeś pracę domową i myślisz strategicznie.':'Ask 2–3 of the questions below — show you did your homework and think strategically.',size:19,color:LIGHTC,font:'Arial',italics:true})]}),
+    ...candidateQuestions.map((q,i)=>
+      new Paragraph({numbering:{reference:'nums',level:0},spacing:{before:i===0?0:140,after:80},children:[new TextRun({text:q,size:21,font:'Arial',color:'1A1218'})]})
+    ),
+  ];
+  return new Document({
+    numbering:{config:[{reference:'nums',levels:[{level:0,format:LevelFormat.DECIMAL,text:'%1.',alignment:AlignmentType.LEFT,style:{paragraph:{indent:{left:480,hanging:280}}}}]}]},
+    sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1600}}},children}]
+  });
+}
+
 // ── PROMPTS ───────────────────────────────────────────────────────
 function promptAnalysis(job,cv){
   return`Przeanalizuj ogłoszenie i CV. Zwróć JSON (tylko JSON, bez markdown):\n{\n  "company":"nazwa firmy",\n  "position":"stanowisko",\n  "keywords":["słowo1","słowo2",...],\n  "hardReqs":["wymaganie1",...],\n  "hiddenNeed":"ukryta potrzeba firmy w 1-2 zdaniach",\n  "tone":"formalny/relacyjny/innowacyjny"\n}\n\nOGŁOSZENIE:\n${job}\n\nCV:\n${cv}`;
@@ -502,7 +548,7 @@ async function run(){
   document.getElementById('progress').style.display='block';
   document.getElementById('downloads').style.display='none';
   document.getElementById('err-area').innerHTML='';
-  [1,2,3,4,5].forEach(n=>setPS(n,''));
+  [1,2,3,4,5,6].forEach(n=>setPS(n,''));
 
   try{
     // STEP 1 — analysis
@@ -533,11 +579,22 @@ async function run(){
     const clEN=safeJSON(clENraw);
     setPS(4,'done');
 
-    // STEP 5 — Build DOCX
+    // STEP 5 — Build CV+CL DOCX
     setPS(5,'active');
     const docLMpl=buildCL(clPL,'pl');
     const docLMen=buildCL(clEN,'en');
     setPS(5,'done');
+
+    // STEP 6 — Recruiter Q&A
+    setPS(6,'active');
+    const qaPLraw=await claude(key,promptQA(job,cv,analysis,'pl'),2500);
+    const qaPL=safeJSON(qaPLraw);
+    const qaENraw=await claude(key,promptQA(job,cv,analysis,'en'),2500);
+    const qaEN=safeJSON(qaENraw);
+    const candidateName=cvDataPL.name||'';
+    const docQApl=buildQA(qaPL,'pl',candidateName);
+    const docQAen=buildQA(qaEN,'en',candidateName);
+    setPS(6,'done');
 
     // Show downloads
     document.getElementById('downloads').style.display='block';
@@ -546,6 +603,8 @@ async function run(){
     attachDL('dl-cv-en',docCVen,`CV_EN_${company}.docx`);
     attachDL('dl-lm-pl',docLMpl,`LM_PL_${company}.docx`);
     attachDL('dl-lm-en',docLMen,`CL_EN_${company}.docx`);
+    attachDL('dl-qa-pl',docQApl,`QA_PL_${company}.docx`);
+    attachDL('dl-qa-en',docQAen,`QA_EN_${company}.docx`);
 
     document.getElementById('downloads').scrollIntoView({behavior:'smooth'});
 
