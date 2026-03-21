@@ -257,10 +257,12 @@ footer{text-align:center;padding:2rem;font-size:.72rem;color:#2e292c;border-top:
 <footer>CV & LM Generator · Powered by Claude API · Twoje dane nie opuszczają przeglądarki</footer>
 
 <script>
+(function(){
+'use strict';
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const {Document,Packer,Paragraph,TextRun,AlignmentType,BorderStyle,WidthType,ShadingType,LevelFormat,Table,TableRow,TableCell}=docx;
 
-const APP_STATE={job:{mode:'file',text:''},cv:{mode:'file',text:''}};
+const ST={job:{mode:'file',text:''},cv:{mode:'file',text:''}};
 
 // ── TABS ──────────────────────────────────────────────────────────
 function tab(panel,t,btn){
@@ -269,8 +271,9 @@ function tab(panel,t,btn){
   p.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
   btn.classList.add('on');
   p.querySelector(`#${panel}-pane-${t}`).classList.add('on');
-  APP_STATE[panel].mode=t;
+  ST[panel].mode=t;
 }
+window.tab=tab;
 
 // ── DRAG/DROP ─────────────────────────────────────────────────────
 function dov(e,id){e.preventDefault();document.getElementById(id).classList.add('over')}
@@ -291,7 +294,7 @@ async function pfile(file,p){
     else if(ext==='txt') text=await file.text();
     else throw new Error('Użyj PDF, DOCX lub TXT');
     if(text.trim().length<30) throw new Error('Nie odczytano tekstu z pliku');
-    APP_STATE[p].text=text.trim();
+    ST[p].text=text.trim();
     dz.classList.add('done');
     dz.innerHTML=`<div class="dz-icon">✅</div><div class="dz-name">${file.name}</div><div class="dz-sub">${(text.length/1000).toFixed(1)}k znaków</div><input type="file" id="${p==='job'?'jfi':'cfi'}" accept=".pdf,.docx,.doc,.txt" onchange="onf(event,'${p}')">`;
     msg.innerHTML='<span class="chip ok">✓ Odczytano</span>';
@@ -322,7 +325,7 @@ async function fetchUrl(){
     ['script','style','nav','footer','header','aside'].forEach(t=>div.querySelectorAll(t).forEach(e=>e.remove()));
     const text=(div.innerText||div.textContent||'').replace(/\s{3,}/g,'\n\n').trim();
     if(text.length<80) throw new Error('Nie pobrano treści — wklej tekst ręcznie');
-    APP_STATE.job.text=text;
+    ST.job.text=text;
     msg.innerHTML=`<span class="chip ok">✓ ${(text.length/1000).toFixed(1)}k znaków</span>`;
     pre.style.display='block';pre.textContent=text.substring(0,260)+'…';
   }catch(e){msg.innerHTML=`<span class="chip err">✗ ${e.message}</span>`}
@@ -330,7 +333,7 @@ async function fetchUrl(){
 }
 
 function getContent(p){
-  if(APP_STATE[p].mode==='file'||APP_STATE[p].mode==='url') return APP_STATE[p].text||'';
+  if(ST[p].mode==='file'||ST[p].mode==='url') return ST[p].text||'';
   return document.getElementById(p+'-ta')?.value?.trim()||'';
 }
 
@@ -618,6 +621,11 @@ async function run(){
 // persist key
 document.getElementById('api-key').addEventListener('input',function(){sessionStorage.setItem('cvk',this.value)});
 const sk=sessionStorage.getItem('cvk');if(sk)document.getElementById('api-key').value=sk;
+
+// expose to window (called from inline HTML handlers)
+window.dov=dov;window.dlv=dlv;window.ddp=ddp;window.onf=onf;
+window.fetchUrl=fetchUrl;window.run=run;
+})();
 </script>
 </body>
 </html>
