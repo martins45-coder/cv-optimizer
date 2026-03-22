@@ -253,6 +253,14 @@ footer{text-align:center;padding:2rem;font-size:.72rem;color:#2e292c;border-top:
     </div>
   </div>
 
+  <div id="debug-log" style="display:none;margin-top:2rem;background:#1a1a1a;border-radius:10px;padding:12px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <span style="font-size:11px;font-weight:600;color:#aaa;letter-spacing:.05em;text-transform:uppercase">Panel debugowania</span>
+      <button onclick="document.getElementById('debug-log').style.display='none'" style="font-size:11px;color:#666;background:none;border:none;cursor:pointer">ukryj</button>
+    </div>
+    <div id="debug-lines" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:2px"></div>
+  </div>
+
 </main>
 <footer>CV & LM Generator · Powered by Claude API · Twoje dane nie opuszczają przeglądarki</footer>
 
@@ -276,30 +284,48 @@ function tab(panel,t,btn){
 window.tab=tab;
 
 // ── DRAG/DROP ─────────────────────────────────────────────────────
+// ── DEBUG LOG ─────────────────────────────────────────────────────
+function dbg(msg,type){
+  const box=document.getElementById('debug-log');
+  if(!box)return;
+  box.style.display='block';
+  const line=document.createElement('div');
+  line.style.cssText='font-size:11px;padding:2px 0;border-bottom:1px solid #333;color:'+(type==='err'?'#f08080':type==='ok'?'#5fcf96':'#aaa');
+  line.textContent='['+new Date().toLocaleTimeString()+'] '+msg;
+  box.querySelector('#debug-lines').prepend(line);
+}
+
 function dov(e,id){e.preventDefault();document.getElementById(id).classList.add('over')}
 function dlv(e,id){document.getElementById(id).classList.remove('over')}
-function ddp(e,p){e.preventDefault();document.getElementById(p==='job'?'jdz':'cdz').classList.remove('over');const f=e.dataTransfer.files[0];if(f)pfile(f,p)}
+function ddp(e,p){e.preventDefault();const dzId=p==='job'?'jdz':'cdz';document.getElementById(dzId).classList.remove('over');const f=e.dataTransfer.files[0];if(f)pfile(f,p)}
 function onf(e,p){const f=e.target.files[0];if(f)pfile(f,p)}
 
 async function pfile(file,p){
+  const dzId=p==='job'?'jdz':'cdz';
   const msg=document.getElementById(p+'-fmsg');
   const pre=document.getElementById(p+'-fprev');
-  const dz=document.getElementById(p==='job'?'jdz':'cdz');
+  const dz=document.getElementById(dzId);
+  dbg('Czytam plik: '+file.name+' ('+p+')');
   msg.innerHTML='<span class="chip warn">⏳ Czytam...</span>';
   try{
     const ext=file.name.split('.').pop().toLowerCase();
+    dbg('Format: '+ext);
     let text='';
-    if(ext==='pdf') text=await rpdf(file);
-    else if(ext==='docx'||ext==='doc') text=await rdocx(file);
+    if(ext==='pdf'){dbg('PDF.js start...');text=await rpdf(file);}
+    else if(ext==='docx'||ext==='doc'){dbg('Mammoth start...');text=await rdocx(file);}
     else if(ext==='txt') text=await file.text();
     else throw new Error('Użyj PDF, DOCX lub TXT');
-    if(text.trim().length<30) throw new Error('Nie odczytano tekstu z pliku');
+    if(text.trim().length<30) throw new Error('Za mało tekstu ('+text.length+' znaków)');
     ST[p].text=text.trim();
+    dbg('OK: '+text.length+' znaków odczytano','ok');
     dz.classList.add('done');
     dz.innerHTML=`<div class="dz-icon">✅</div><div class="dz-name">${file.name}</div><div class="dz-sub">${(text.length/1000).toFixed(1)}k znaków</div><input type="file" id="${p==='job'?'jfi':'cfi'}" accept=".pdf,.docx,.doc,.txt" onchange="onf(event,'${p}')">`;
     msg.innerHTML='<span class="chip ok">✓ Odczytano</span>';
     pre.style.display='block';pre.textContent=text.substring(0,260)+'…';
-  }catch(e){msg.innerHTML=`<span class="chip err">✗ ${e.message}</span>`}
+  }catch(e){
+    dbg('BŁĄD: '+e.message,'err');
+    msg.innerHTML=`<span class="chip err">✗ ${e.message}</span>`;
+  }
 }
 
 async function rpdf(file){
@@ -318,6 +344,7 @@ async function fetchUrl(){
   const btn=document.getElementById('fetch-btn');
   if(!url)return;
   btn.disabled=true;btn.textContent='Pobieranie...';
+  dbg('Pobieranie URL: '+url.substring(0,60)+'...');
   try{
     const res=await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
     const data=await res.json();
@@ -326,13 +353,18 @@ async function fetchUrl(){
     const text=(div.innerText||div.textContent||'').replace(/\s{3,}/g,'\n\n').trim();
     if(text.length<80) throw new Error('Nie pobrano treści — wklej tekst ręcznie');
     ST.job.text=text;
+    dbg('URL OK: '+text.length+' znaków','ok');
     msg.innerHTML=`<span class="chip ok">✓ ${(text.length/1000).toFixed(1)}k znaków</span>`;
     pre.style.display='block';pre.textContent=text.substring(0,260)+'…';
-  }catch(e){msg.innerHTML=`<span class="chip err">✗ ${e.message}</span>`}
+  }catch(e){
+    dbg('URL BŁĄD: '+e.message,'err');
+    msg.innerHTML=`<span class="chip err">✗ ${e.message}</span>`;
+  }
   btn.disabled=false;btn.textContent='Pobierz treść';
 }
 
 function getContent(p){
+  // p = 'job' or 'cv', matching ST keys
   if(ST[p].mode==='file'||ST[p].mode==='url') return ST[p].text||'';
   return document.getElementById(p+'-ta')?.value?.trim()||'';
 }
@@ -546,6 +578,7 @@ async function run(){
   if(!job){alert('Dodaj ogłoszenie o pracę');return}
   if(!cv){alert('Dodaj CV');return}
 
+  dbg('Start pipeline — ogłoszenie:'+job.length+'zn, CV:'+cv.length+'zn');
   const btn=document.getElementById('run-btn');
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Przetwarzam...';
   document.getElementById('progress').style.display='block';
@@ -554,42 +587,33 @@ async function run(){
   [1,2,3,4,5,6].forEach(n=>setPS(n,''));
 
   try{
-    // STEP 1 — analysis
-    setPS(1,'active');
+    setPS(1,'active');dbg('Etap 1: analiza firmy...');
     const analysisRaw=await claude(key,promptAnalysis(job,cv),800);
     const analysis=safeJSON(analysisRaw);
-    setPS(1,'done');
+    dbg('Etap 1 OK: '+analysis.company,'ok');setPS(1,'done');
 
-    // STEP 2 — CV data PL
-    setPS(2,'active');
+    setPS(2,'active');dbg('Etap 2: CV PL...');
     const cvDataPLraw=await claude(key,promptCVdata(job,cv,analysis,'pl'),3000);
     const cvDataPL=safeJSON(cvDataPLraw);
-    setPS(2,'done');
+    dbg('Etap 2 OK: '+cvDataPL.name,'ok');setPS(2,'done');
 
-    // STEP 3 — CV data EN + build CVs
-    setPS(3,'active');
+    setPS(3,'active');dbg('Etap 3: CV EN...');
     const cvDataENraw=await claude(key,promptCVdata(job,cv,analysis,'en'),3000);
     const cvDataEN=safeJSON(cvDataENraw);
     const docCVpl=buildCV(cvDataPL,'pl');
     const docCVen=buildCV(cvDataEN,'en');
-    setPS(3,'done');
+    dbg('Etap 3 OK','ok');setPS(3,'done');
 
-    // STEP 4 — Cover Letters
-    setPS(4,'active');
+    setPS(4,'active');dbg('Etap 4: listy motywacyjne...');
     const clPLraw=await claude(key,promptCL(job,cv,analysis,'pl'),1500);
     const clPL=safeJSON(clPLraw);
     const clENraw=await claude(key,promptCL(job,cv,analysis,'en'),1500);
     const clEN=safeJSON(clENraw);
-    setPS(4,'done');
+    dbg('Etap 4 OK','ok');setPS(4,'done');
 
-    // STEP 5 — Build CV+CL DOCX
-    setPS(5,'active');
+    setPS(5,'active');dbg('Etap 5: pytania rekrutera...');
     const docLMpl=buildCL(clPL,'pl');
     const docLMen=buildCL(clEN,'en');
-    setPS(5,'done');
-
-    // STEP 6 — Recruiter Q&A
-    setPS(6,'active');
     const qaPLraw=await claude(key,promptQA(job,cv,analysis,'pl'),2500);
     const qaPL=safeJSON(qaPLraw);
     const qaENraw=await claude(key,promptQA(job,cv,analysis,'en'),2500);
@@ -597,9 +621,11 @@ async function run(){
     const candidateName=cvDataPL.name||'';
     const docQApl=buildQA(qaPL,'pl',candidateName);
     const docQAen=buildQA(qaEN,'en',candidateName);
-    setPS(6,'done');
+    dbg('Etap 5 OK','ok');setPS(5,'done');
 
-    // Show downloads
+    setPS(6,'active');dbg('Etap 6: budowanie DOCX...');
+    dbg('6 plików gotowych do pobrania','ok');setPS(6,'done');
+
     document.getElementById('downloads').style.display='block';
     const company=(analysis.company||'firma').replace(/\s+/g,'_');
     attachDL('dl-cv-pl',docCVpl,`CV_PL_${company}.docx`);
@@ -608,13 +634,12 @@ async function run(){
     attachDL('dl-lm-en',docLMen,`CL_EN_${company}.docx`);
     attachDL('dl-qa-pl',docQApl,`QA_PL_${company}.docx`);
     attachDL('dl-qa-en',docQAen,`QA_EN_${company}.docx`);
-
     document.getElementById('downloads').scrollIntoView({behavior:'smooth'});
 
   }catch(e){
+    dbg('BŁĄD KRYTYCZNY: '+e.message,'err');
     document.getElementById('err-area').innerHTML=`<div class="err-box">❌ ${e.message}</div>`;
   }
-
   btn.disabled=false;btn.innerHTML='Generuj ponownie <span>→</span>';
 }
 
