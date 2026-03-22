@@ -170,6 +170,11 @@ footer{text-align:center;padding:2rem;font-size:.72rem;color:#2e292c;border-top:
         <div><div class="df">🎯</div><div class="dn">Pytania rekrutera + odpowiedzi</div><div class="dy">Interview Preparation · PL & EN</div></div>
         <div class="dwb"><button class="db" id="dl-qa-pl">⬇ Arkusz (PL)</button><button class="db" id="dl-qa-en">⬇ Sheet (EN)</button></div>
       </div></div>
+      <div class="dc-wide" style="margin-top:1rem">
+        <button onclick="resetApp()" style="width:100%;padding:14px;background:transparent;border:1.5px solid var(--bdr);border-radius:10px;color:var(--mut);font-family:'Inter',sans-serif;font-size:14px;cursor:pointer;transition:all .2s;letter-spacing:.02em" onmouseover="this.style.borderColor='var(--cr2)';this.style.color='var(--txt)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--mut)'">
+          ↩ Nowa analiza — zacznij od nowa
+        </button>
+      </div>
     </div>
   </div>
   <div id="dbg">
@@ -536,6 +541,60 @@ async function run(){
   btn.disabled=false;btn.innerHTML='Generuj ponownie →';
 }
 window.run=run;
+
+// ── RESET ─────────────────────────────────────────────────────────
+function resetApp(){
+  // Reset state
+  ST.job={mode:'file',text:''};
+  ST.cv={mode:'file',text:''};
+
+  // Reset dropzones
+  ['jdz','cdz'].forEach(id=>{
+    const dz=document.getElementById(id);
+    if(!dz)return;
+    dz.classList.remove('done','over');
+    const p=id==='jdz'?'job':'cv';
+    const fileId=id==='jdz'?'jfi':'cfi';
+    dz.innerHTML='<div class="dz-icon">📄</div><div class="dz-lbl">Kliknij lub przeciągnij</div><div class="dz-sub">PDF · DOCX · TXT</div><input type="file" id="'+fileId+'" accept=".pdf,.docx,.doc,.txt" onchange="onf(event,\''+p+'\')"">';
+  });
+
+  // Reset messages and previews
+  ['job-fmsg','cv-fmsg','url-msg','err-area','dbg-lines'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.innerHTML='';
+  });
+  ['job-fprev','cv-fprev','url-prev'].forEach(id=>{
+    const el=document.getElementById(id);if(el){el.style.display='none';el.textContent='';}
+  });
+
+  // Reset textareas
+  ['job-ta','cv-ta'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+
+  // Reset URL input
+  const urlEl=document.getElementById('job-url');if(urlEl)urlEl.value='';
+
+  // Reset tabs to file mode
+  document.querySelectorAll('.panel').forEach(panel=>{
+    panel.querySelectorAll('.tab').forEach((b,i)=>{b.classList.toggle('on',i===0);});
+    panel.querySelectorAll('.pane').forEach((p,i)=>{p.classList.toggle('on',i===0);});
+  });
+
+  // Hide progress and downloads, reset steps
+  document.getElementById('progress').style.display='none';
+  document.getElementById('downloads').style.display='none';
+  document.getElementById('dbg').style.display='none';
+  [1,2,3,4,5,6].forEach(n=>setPS(n,''));
+
+  // Reset run button
+  const btn=document.getElementById('run-btn');
+  if(btn){btn.disabled=false;btn.innerHTML='Generuj dokumenty →';}
+
+  // Scroll to top
+  window.scrollTo({top:0,behavior:'smooth'});
+  dbg('Reset — gotowy do nowej analizy','ok');
+}
+window.resetApp=resetApp;
 
 // persist key
 document.getElementById('api-key').addEventListener('input',function(){sessionStorage.setItem('cvk',this.value);});
